@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE grammar PUBLIC "-//W3C//DTD GRAMMAR 1.0//EN"
+                "grammar.dtd">
+<!-- the default grammar language is FR  -->
+<grammar  version="1.0"
+          mode ="voice"
+          xmlns="http://www.w3.org/2001/06/grammar"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://www.w3.org/2001/06/grammar
+                              grammar.xsd"
+          xml:lang="fr-FR" root="answer" tag-format="semantics/1.0">
+          
+   <rule id="answer" scope="public"> 
+    <ruleref special="GARBAGE" /> 
+    <one-of>
+      <item><ruleref uri="#deplacement"/></item>
+      <item><ruleref uri="#initialiser"/></item>
+      <item><ruleref uri="#position"/></item>
+    </one-of>          
+    <tag>out = rules.latest().text;</tag>
+    <ruleref special="GARBAGE" />
+  </rule>
+       
+   <rule id="deplacement">
+    <item>déplacer <ruleref uri="#position"/></item>
+  </rule> 
+  
+  <rule id="initialiser">
+      <item>initialiser</item>
+      <tag>out.text  = "Action:" + meta.current().text;</tag>
+  </rule>
+  
+  <rule id="position">
+    <one-of>
+      <item>en haut</item>
+      <item>en bas</item>
+      <item>a gauche</item>
+      <item>a droite</item>
+    </one-of>      
+    <tag>out.text  = "Action:deplacement Position:" + meta.current().text;</tag>
+  </rule>
+  
+</grammar>
