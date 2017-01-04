@@ -13,31 +13,75 @@
    <rule id="answer" scope="public"> 
     <ruleref special="GARBAGE" /> 
     <one-of>
-      <item><ruleref uri="#deplacement"/></item>
-      <item><ruleref uri="#initialiser"/></item>
       <item><ruleref uri="#position"/></item>
+      <item><ruleref uri="#couleur"/></item>
+      <item><ruleref uri="#objet"/></item>
+      <item><ruleref uri="#attribut"/></item>
     </one-of>          
     <tag>out = rules.latest().text;</tag>
     <ruleref special="GARBAGE" />
   </rule>
        
-   <rule id="deplacement">
-    <item>déplacer <ruleref uri="#position"/></item>
+   <rule id="position">
+    <one-of>
+      <item>ici</item>
+      <item>là</item>
+      <item>à cette position</item>
+      <item>à cet endroit</item>
+    </one-of>      
+    <tag>out.text  = "SRA:Position here" </tag>
   </rule> 
   
-  <rule id="initialiser">
-      <item>initialiser</item>
-      <tag>out.text  = "Action:" + meta.current().text;</tag>
+  <rule id="couleur">
+    <one-of>
+      <item>noir</item>
+      <item>bleu</item>
+      <item>rouge</item>
+      <item>gris</item>
+      <item>jaune</item>
+      <item>vert</item>
+      <item>blanc</item>
+    </one-of>      
+    <tag>out.text  = "SRA:Couleur " + meta.current().text;</tag>
   </rule>
   
-  <rule id="position">
+  <rule id="objet">
     <one-of>
-      <item>en haut</item>
-      <item>en bas</item>
-      <item>a gauche</item>
-      <item>a droite</item>
+      <item><ruleref uri="#objet_any"/></item>
+      <item><ruleref uri="#objet_rectangle"/></item>
+      <item><ruleref uri="#objet_ellipse"/></item>
+    </one-of>
+  </rule>
+
+  <rule id="objet_any">
+    <one-of>
+      <item>cet objet</item>
+      <item>cette forme</item>
     </one-of>      
-    <tag>out.text  = "Action:deplacement Position:" + meta.current().text;</tag>
+    <tag>out.text  = "SRA:Objet any"</tag>
+  </rule>
+
+  <rule id="objet_rectangle">
+    <item>ce rectangle</item>   
+    <tag>out.text  = "SRA:Objet rectangle"</tag>
+  </rule>
+
+  <rule id="objet_ellipse">
+    <item>cette ellipse</item>   
+    <tag>out.text  = "SRA:Objet ellipse"</tag>
+  </rule>
+
+  <rule id="attribut">
+    <one-of>
+      <item><ruleref uri="#attribut_couleur"/></item>
+    </one-of>      
+  </rule>
+
+  <rule id="attribut_couleur">
+    <one-of>
+      <item>cette couleur</item>
+    </one-of>
+    <tag>out.text = "SRA:Attribut couleur"</tag>
   </rule>
   
 </grammar>
