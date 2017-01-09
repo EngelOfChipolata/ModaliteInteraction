@@ -51,21 +51,21 @@ public class MainView extends javax.swing.JFrame {
         canvasPanel1 = new fr.enac.m2ihm.modaliteinteraction.canvas.CanvasPanel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
-            public void mouseDragged(java.awt.event.MouseEvent evt) {
-                formMouseDragged(evt);
-            }
-        });
-        addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mousePressed(java.awt.event.MouseEvent evt) {
-                formMousePressed(evt);
-            }
-            public void mouseReleased(java.awt.event.MouseEvent evt) {
-                formMouseReleased(evt);
-            }
-        });
 
         canvasPanel1.setBackground(new java.awt.Color(254, 254, 254));
+        canvasPanel1.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            public void mouseDragged(java.awt.event.MouseEvent evt) {
+                canvasPanel1MouseDragged(evt);
+            }
+        });
+        canvasPanel1.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                canvasPanel1MousePressed(evt);
+            }
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                canvasPanel1MouseReleased(evt);
+            }
+        });
 
         javax.swing.GroupLayout canvasPanel1Layout = new javax.swing.GroupLayout(canvasPanel1);
         canvasPanel1.setLayout(canvasPanel1Layout);
@@ -92,17 +92,17 @@ public class MainView extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void formMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_formMousePressed
+    private void canvasPanel1MousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_canvasPanel1MousePressed
         model.handleEvent(DrawEvents.BEGIN_DRAW, evt.getPoint());
-    }//GEN-LAST:event_formMousePressed
+    }//GEN-LAST:event_canvasPanel1MousePressed
 
-    private void formMouseDragged(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_formMouseDragged
-        model.handleEvent(DrawEvents.DRAW, evt.getPoint());
-    }//GEN-LAST:event_formMouseDragged
-
-    private void formMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_formMouseReleased
+    private void canvasPanel1MouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_canvasPanel1MouseReleased
         model.handleEvent(DrawEvents.END_DRAW, evt.getPoint());
-    }//GEN-LAST:event_formMouseReleased
+    }//GEN-LAST:event_canvasPanel1MouseReleased
+
+    private void canvasPanel1MouseDragged(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_canvasPanel1MouseDragged
+        model.handleEvent(DrawEvents.DRAW, evt.getPoint());
+    }//GEN-LAST:event_canvasPanel1MouseDragged
 
     /**
      * @param args the command line arguments
