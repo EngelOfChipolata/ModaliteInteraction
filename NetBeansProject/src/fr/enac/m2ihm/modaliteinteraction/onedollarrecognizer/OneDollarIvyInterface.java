@@ -62,6 +62,14 @@ public class OneDollarIvyInterface {
         }
     }
     
+    public void sendGesture(Gesture gesture){
+        try {
+            ivy.sendMsg("1Dollar:Gesture "+gesture.toString());
+        } catch (IvyException ex) {
+            Logger.getLogger(OneDollarIvyInterface.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
     public void addPropertyChangeListener(PropertyChangeListener li){
         support.addPropertyChangeListener(li);
     }

@@ -5,11 +5,13 @@
  */
 package fr.enac.m2ihm.modaliteinteraction.onedollarrecognizer;
 
+import java.io.Serializable;
+
 /**
  *
  * @author guilhem
  */
-public enum Gestures {
+public enum Gesture implements Serializable{
     ELLIPSE("ellipse"),
     RECTANGLE("rectangle"),
     LINE("line"),
@@ -17,7 +19,7 @@ public enum Gestures {
     
     private final String gestureName;
     
-    private Gestures(String name){
+    private Gesture(String name){
         gestureName = name;
     }
 
