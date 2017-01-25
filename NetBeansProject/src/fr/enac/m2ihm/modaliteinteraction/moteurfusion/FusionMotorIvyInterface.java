@@ -12,6 +12,8 @@ import java.awt.Color;
 import java.awt.Point;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.Timer;
@@ -29,11 +31,13 @@ public class FusionMotorIvyInterface {
     public static final String clicEvent = "clicProperty";
     public static final String keywordColorEvent = "keywordColorProperty";
     public static final String keywordDeCetteCouleurEvent = "keywordDCCProperty";
+    public static final String keywordObjectEvent = "keywordObjectProperty";
 
     private final double speechConfidenceIndex = 0.8;
     private final PropertyChangeSupport support;
     private final Ivy ivy;
     private final FSMColor fsmColor;
+    private final FSMDelete fsmDelete;
 
     public FusionMotorIvyInterface() {
         support = new PropertyChangeSupport(this);
@@ -64,8 +68,34 @@ public class FusionMotorIvyInterface {
             ivy.bindMsg("sra5 Parsed=SRA:Couleur ([^ ]*) Confidence=([^ ]*)", (client, args) -> {
                 double confidence = Double.valueOf(args[1].replace(',', '.'));
                 if (confidence >= speechConfidenceIndex) {
-                    Color c;
-                    switch (args[0].toUpperCase()){
+                    Color c = colorFromFrenchString(args[0]);
+                    support.firePropertyChange(keywordColorEvent, null, c);
+                }
+            });
+            ivy.bindMsg("sra5 Parsed=SRA:Attribut couleur Confidence=([^ ]*)", (client, args) -> {
+                double confidence = Double.valueOf(args[0].replace(',', '.'));
+                if (confidence >= speechConfidenceIndex) {
+                    support.firePropertyChange(keywordDeCetteCouleurEvent, null, null);
+                }
+            });
+            ivy.bindMsg("sra5 Parsed=SRA:Objet ([^ ]*) Confidence=([^ ]*)", (client, args) ->{
+                double confidence = Double.valueOf(args[1].replace(',', '.'));
+                if (confidence >= speechConfidenceIndex) {
+                    Forme f = Forme.valueOf(args[0].toUpperCase());
+                    support.firePropertyChange(keywordObjectEvent, null, f);
+                }
+            });
+
+        } catch (IvyException ex) {
+            Logger.getLogger(FusionMotorIvyInterface.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        fsmColor = new FSMColor();
+        fsmDelete = new FSMDelete();
+    }
+    
+    private Color colorFromFrenchString(String str){
+        Color c;
+        switch (str.toUpperCase()){
                         case "NOIR":
                             c = Color.BLACK;
                             break;
@@ -90,21 +120,15 @@ public class FusionMotorIvyInterface {
                         default:
                             c = Color.WHITE;
                             break;
-                    }
-                    support.firePropertyChange(keywordColorEvent, null, c);
-                }
-            });
-            ivy.bindMsg("sra5 Parsed=SRA:Attribut couleur Confidence=([^ ]*)", (client, args) -> {
-                double confidence = Double.valueOf(args[0].replace(',', '.'));
-                if (confidence >= speechConfidenceIndex) {
-                    support.firePropertyChange(keywordDeCetteCouleurEvent, null, null);
-                }
-            });
-
-        } catch (IvyException ex) {
-            Logger.getLogger(FusionMotorIvyInterface.class.getName()).log(Level.SEVERE, null, ex);
         }
-        fsmColor = new FSMColor();
+        return c;
+    }
+
+    public FusionMotorIvyInterface(PropertyChangeSupport support, Ivy ivy, FSMColor fsmColor, FSMDelete fsmDelete) {
+        this.support = support;
+        this.ivy = ivy;
+        this.fsmColor = fsmColor;
+        this.fsmDelete = fsmDelete;
     }
 
     public void addPropertyChangeListener(PropertyChangeListener li) {
@@ -164,7 +188,7 @@ public class FusionMotorIvyInterface {
                     state = FSMColorState.WAIT_INFO;
                     answered = true;
                 });
-                ivy.bindMsg("Palette:Info nom= arg1 x=[^ ]* y=[^ ]* longueur=[^ ]* hauteur=[^ ]* couleurFond=([^ ]*) couleurContour=[^ ]*", (client, args) -> {
+                ivy.bindMsg("Palette:Info nom=[^ ]* x=[^ ]* y=[^ ]* longueur=[^ ]* hauteur=[^ ]* couleurFond=([^ ]*) couleurContour=[^ ]*", (client, args) -> {
                    finalColor = Color.getColor(args[0]);
                    state = FSMColorState.IDLE;
                    answered = true;
@@ -231,5 +255,143 @@ public class FusionMotorIvyInterface {
         } catch (IvyException ex) {
             Logger.getLogger(FusionMotorIvyInterface.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    private enum FSMDeleteState{
+        IDLE,
+        DELETE_GET_ALL_BELOW_POINT,
+        DELETE_GET_ALL_INFOS
+    }
+    private final class FSMDelete{
+        
+        private FSMDeleteState state;
+        private Forme forme;
+        private Color color;
+        private final Timer timer1;
+        private final Timer timer2;
+        private int size;
+        private List<String> noms;
+        
+        private FSMDelete(){
+            state = FSMDeleteState.IDLE;
+            timer1 = new Timer(250, null);
+            timer1.setRepeats(false);
+            timer2 = new Timer(250, null);
+            timer2.setRepeats(false);
+            timer1.addActionListener((e) -> {
+                switch(state){
+                    case DELETE_GET_ALL_BELOW_POINT:
+                        if (forme == Forme.ANY){
+                            size = noms.size() - 1;
+                            demanderInfo(noms.get(size));
+                            timer1.stop();
+                            state = FSMDeleteState.DELETE_GET_ALL_INFOS;
+                            timer2.restart();
+                        }else if (forme != Forme.ANY){
+                            trierFormes();
+                            size = noms.size() - 1;
+                            demanderInfo(noms.get(size));
+                            timer1.stop();
+                            state = FSMDeleteState.DELETE_GET_ALL_INFOS;
+                            timer2.restart();
+                        }else{
+                            throw new RuntimeException("Forme to delete is not defined !");
+                        }
+                        break;
+                }
+            });
+            timer2.addActionListener((e) -> {
+                switch (state){
+                    case DELETE_GET_ALL_BELOW_POINT:
+                        if (size != 0){
+                            noms.remove(size);
+                            demanderInfo(noms.get(--size));
+                            state = FSMDeleteState.DELETE_GET_ALL_BELOW_POINT;
+                            timer2.restart();
+                        }else if (size == 0 && !noms.isEmpty()){
+                            supprimer(noms.get(0));
+                            state = FSMDeleteState.IDLE;
+                            timer2.stop();
+                        }else if (size == 0 && noms.isEmpty()){
+                            state = FSMDeleteState.IDLE;
+                            timer2.stop();
+                        }
+                        break;
+                }
+            });
+            try {
+                ivy.bindMsg("Palette:ResultatTesterPoint x=[^ ]* y=[^ ]* nom=([^ ]*)", (client, args) -> {
+                    switch (state){
+                        case DELETE_GET_ALL_BELOW_POINT:
+                            noms.add(args[0]);
+                            timer1.restart();
+                            break;
+                    }
+                });
+                ivy.bindMsg("Palette:Info nom=([^ ]*) x=[^ ]* y=[^ ]* longueur=[^ ]* hauteur=[^ ]* couleurFond=([^ ]*) couleurContour=[^ ]*", (client, args) -> {
+                    switch (state){
+                        case DELETE_GET_ALL_INFOS:
+                            if (size != 0){
+                                if (color != null && color != colorFromFrenchString(args[1])){
+                                    noms.remove(args[0]);
+                                }
+                                demanderInfo(noms.get(--size));
+                                state = FSMDeleteState.DELETE_GET_ALL_INFOS;
+                                timer2.restart();
+                            }else if(size == 0 && color == null && !noms.isEmpty()){
+                                timer2.stop();
+                                state = FSMDeleteState.IDLE;
+                                supprimer(noms.get(0));
+                            }else if(size == 0 && color != null && !noms.isEmpty()){
+                                if (color != colorFromFrenchString(args[1])){
+                                    noms.remove(args[0]);
+                                }
+                                timer2.stop();
+                                state = FSMDeleteState.IDLE;
+                                supprimer(noms.get(0));
+                            }else if(size == 0 && noms.isEmpty()){
+                                timer2.stop();
+                                state=FSMDeleteState.IDLE;
+                            }
+                    }
+                });
+            } catch (IvyException ex) {
+                Logger.getLogger(FusionMotorIvyInterface.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        private void delete(int x, int y, Forme f, Color c){
+            noms = new ArrayList<>();
+            forme = f;
+            color = c;
+            state = FSMDeleteState.DELETE_GET_ALL_BELOW_POINT;
+            testerPoint(x, y);
+            timer1.restart();
+        }
+        
+        private void trierFormes(){
+            List<String> filteredList = new ArrayList<>();
+            String prefix = "";
+            if (forme == Forme.ELLIPSE){
+                prefix = "ellipse";
+            }
+            if (forme == Forme.RECTANGLE){
+                prefix = "rectangle";
+            }
+            for (String nom: noms){
+                if (nom.startsWith(prefix)){
+                    filteredList.add(nom);
+                }
+            }
+            noms = filteredList;
+        }
+    }
+    
+    public void delete(int x, int y, Forme f, Color c){
+        fsmDelete.delete(x, y, f, c);
+    }
+    
+    public void supprimer(String name){
+        //TODO ivy send supprimer(name)
     }
 }

@@ -17,7 +17,7 @@ import javax.swing.Timer;
 public class FusionMotor {
 
     private final int[] timerDurations = {3000, 3000, 3000, 4500, 4500, 4500, // Timer6, end creation
-                                            4500, 4500, 4500, 3000, 3000      // Timer 10, end supression
+                                            4500, 4500, 4500, 3000     // Timer 10, end supression
 };
 
     private final FusionMotorIvyInterface ivyInterface;
@@ -27,10 +27,13 @@ public class FusionMotor {
     private Point creationPosition;
     private Point creationXY;
     private Color creationColor;
+    
+    private Forme suppressionValueForme;
+    private Point suppressionXY;
+    private Color suppressionColor;
+    
     private final Timer[] timers;
     
-    private Forme suppressionForme;
-
     public FusionMotor() {
         ivyInterface = new FusionMotorIvyInterface();
         ivyInterface.addPropertyChangeListener(FusionMotorIvyInterface.createEvent, ((evt) -> {
@@ -51,6 +54,9 @@ public class FusionMotor {
         ivyInterface.addPropertyChangeListener(FusionMotorIvyInterface.deleteEvent, (evt) -> {
             croix();
         });
+        ivyInterface.addPropertyChangeListener(FusionMotorIvyInterface.keywordObjectEvent, (evt) -> {
+            kwObject((Forme) evt.getNewValue());
+        });
         timers = new Timer[timerDurations.length];
         for (int i = 0; i < timers.length; i++) {
             final int index = i;
@@ -70,7 +76,7 @@ public class FusionMotor {
         switch (state) {
             case IDLE:
                 goToState(FusionMotorState.CREATION);
-                majValueForme(f);
+                majValueFormeCrea(f);
 
                 break;
             default:
@@ -83,6 +89,7 @@ public class FusionMotor {
         switch (state){
             case IDLE:
                 goToState(FusionMotorState.SUPPRESSION);
+                break;
         }
     }
 
@@ -93,12 +100,12 @@ public class FusionMotor {
                 break;
             case CREATION_WAIT_FOR_KEYWORD:
                 if (creationColor != null) {
-                    majPos(creationXY);
+                    majPosCrea(creationXY);
                     create();
                     goToState(FusionMotorState.IDLE);
                 } else {
                     goToState(FusionMotorState.CREATION);
-                    majPos(creationXY);
+                    majPosCrea(creationXY);
                 }
                 break;
         }
@@ -113,10 +120,10 @@ public class FusionMotor {
             case CREATION_WAIT_FOR_CLIC_POSITION:
                 if (creationColor == null) {
                     goToState(FusionMotorState.CREATION);
-                    majPos(pt);
+                    majPosCrea(pt);
                 } else {
                     goToState(FusionMotorState.IDLE);
-                    majPos(pt);
+                    majPosCrea(pt);
                     create();
                     
                 }
@@ -134,6 +141,23 @@ public class FusionMotor {
                     creationColor = ivyInterface.fsmColor(pt.x, pt.y);
                     create();
                 }
+                break;
+            case SUPPRESSION:
+                suppressionXY = pt;
+                goToState(FusionMotorState.SUPPRESSION_WAIT_KEYWORD_OBJECT);
+                break;
+            case SUPPRESSION_WAIT_CLIC:
+                suppressionXY = pt;
+                goToState(FusionMotorState.SUPPRESSION_WAIT_COLOR);
+                break;
+            case SUPPRESSION_WAIT_COLOR:
+                suppressionXY = pt;
+                goToState(FusionMotorState.SUPPRESSION_WAIT_KEYWORD_OBJECT_UPDATE);
+                break;
+            case SUPPRESSION_WAIT_CLIC_UPDATE:
+                suppressionXY = pt;
+                goToState(FusionMotorState.SUPPRESSION_WAIT_COLOR);
+                break;
         }
     }
 
@@ -148,6 +172,11 @@ public class FusionMotor {
                     create();
                     goToState(FusionMotorState.IDLE);
                 }
+                break;
+            case SUPPRESSION_WAIT_COLOR:
+                suppressionColor = c;
+                suppression();
+                break;
         }
     }
 
@@ -165,6 +194,27 @@ public class FusionMotor {
                     create();
                     goToState(FusionMotorState.IDLE);
                 }
+                break;
+        }
+    }
+    
+    private void kwObject(Forme f){
+        switch (state){
+            case SUPPRESSION:
+                majValueFormeSuppr(f);
+                goToState(FusionMotorState.SUPPRESSION_WAIT_CLIC);
+                break;
+            case SUPPRESSION_WAIT_KEYWORD_OBJECT:
+                majValueFormeSuppr(f);
+                goToState(FusionMotorState.SUPPRESSION_WAIT_COLOR);
+                break;
+            case SUPPRESSION_WAIT_COLOR:
+                majValueFormeSuppr(f);
+                goToState(FusionMotorState.SUPPRESSION_WAIT_CLIC_UPDATE);
+                break;
+            case SUPPRESSION_WAIT_KEYWORD_OBJECT_UPDATE:
+                majValueFormeSuppr(f);
+                goToState(FusionMotorState.SUPPRESSION_WAIT_COLOR);
                 break;
         }
     }
@@ -204,16 +254,34 @@ public class FusionMotor {
                     create();
                 }
                 break;
+            case 6:
+                goToState(FusionMotorState.IDLE);
+                break;
+            case 7:
+                goToState(FusionMotorState.SUPPRESSION);
+                break;
+            case 8:
+                goToState(FusionMotorState.SUPPRESSION);
+                break;
+            case 9:
+                suppression();
+                goToState(FusionMotorState.IDLE);
+                break;
         }
     }
 
-    private void majPos(Point pt) {
+    private void majPosCrea(Point pt) {
         creationPosition = pt;
     }
 
-    private void majValueForme(Forme f) {
+
+    private void majValueFormeCrea(Forme f) {
         creationValueForme = f;
     }
+    private void majValueFormeSuppr(Forme f){
+        suppressionValueForme = f;
+    }
+    
 
     private void goToState(FusionMotorState state) {
         if (this.state != null) {
@@ -262,12 +330,16 @@ public class FusionMotor {
                 case DEPLACEMENT_COLOR:
                     break;
                 case SUPPRESSION:
+                    timers[6].stop();
                     break;
                 case SUPPRESSION_WAIT_CLIC:
+                    timers[7].stop();
                     break;
                 case SUPPRESSION_WAIT_KEYWORD_OBJECT:
+                    timers[8].stop();
                     break;
                 case SUPPRESSION_WAIT_COLOR:
+                    timers[9].stop();
                     break;
                 case SUPPRESSION_WAIT_CLIC_UPDATE:
                     break;
@@ -324,12 +396,16 @@ public class FusionMotor {
             case DEPLACEMENT_COLOR:
                 break;
             case SUPPRESSION:
+                timers[6].restart();
                 break;
             case SUPPRESSION_WAIT_CLIC:
+                timers[7].restart();
                 break;
             case SUPPRESSION_WAIT_KEYWORD_OBJECT:
+                timers[8].restart();
                 break;
             case SUPPRESSION_WAIT_COLOR:
+                timers[9].restart();
                 break;
             case SUPPRESSION_WAIT_CLIC_UPDATE:
                 break;
@@ -347,12 +423,18 @@ public class FusionMotor {
         this.ivyInterface.create(x, y, creationColor, creationValueForme);
     }
     
+    private void suppression(){
+        this.ivyInterface.delete(suppressionXY.x, suppressionXY.y, suppressionValueForme, suppressionColor);
+    }
+    
     private void reset(){
         creationColor = null;
         creationPosition = null;
         creationValueForme = null;
         creationXY = null;
-        suppressionForme = null;
+        suppressionValueForme = null;
+        suppressionColor = null;
+        suppressionXY = null;
     }
 
 }
