@@ -16,7 +16,8 @@ import javax.swing.Timer;
  */
 public class FusionMotor {
 
-    private final int[] timerDurations = {1000, 1000, 1000, 1500, 1500, 1500 // Timer6, end creation
+    private final int[] timerDurations = {3000, 3000, 3000, 4500, 4500, 4500, // Timer6, end creation
+                                            4500, 4500, 4500, 3000, 3000      // Timer 10, end supression
 };
 
     private final FusionMotorIvyInterface ivyInterface;
@@ -27,6 +28,8 @@ public class FusionMotor {
     private Point creationXY;
     private Color creationColor;
     private final Timer[] timers;
+    
+    private Forme suppressionForme;
 
     public FusionMotor() {
         ivyInterface = new FusionMotorIvyInterface();
@@ -44,6 +47,9 @@ public class FusionMotor {
         });
         ivyInterface.addPropertyChangeListener(FusionMotorIvyInterface.keywordDeCetteCouleurEvent, (evt) -> {
             kwDCC();
+        });
+        ivyInterface.addPropertyChangeListener(FusionMotorIvyInterface.deleteEvent, (evt) -> {
+            croix();
         });
         timers = new Timer[timerDurations.length];
         for (int i = 0; i < timers.length; i++) {
@@ -72,6 +78,13 @@ public class FusionMotor {
 
         }
     }
+    
+    private void croix(){
+        switch (state){
+            case IDLE:
+                goToState(FusionMotorState.SUPPRESSION);
+        }
+    }
 
     private void kwPosition() {
         switch (state) {
@@ -80,7 +93,8 @@ public class FusionMotor {
                 break;
             case CREATION_WAIT_FOR_KEYWORD:
                 if (creationColor != null) {
-                    //CREATE
+                    majPos(creationXY);
+                    create();
                     goToState(FusionMotorState.IDLE);
                 } else {
                     goToState(FusionMotorState.CREATION);
@@ -102,7 +116,9 @@ public class FusionMotor {
                     majPos(pt);
                 } else {
                     goToState(FusionMotorState.IDLE);
-                    //CREATE
+                    majPos(pt);
+                    create();
+                    
                 }
                 break;
             case CREATION_WAIT_FOR_KEYWORD:
@@ -112,11 +128,11 @@ public class FusionMotor {
             case CREATION_WAIT_FOR_CLIC_COLOR:
                 if (creationPosition == null) {
                     goToState(FusionMotorState.CREATION);
-                    //FSM COLOR
+                    creationColor = ivyInterface.fsmColor(pt.x, pt.y);
                 } else {
                     goToState(FusionMotorState.IDLE);
-                    //FSMCOLOR
-                    //CREATE
+                    creationColor = ivyInterface.fsmColor(pt.x, pt.y);
+                    create();
                 }
         }
     }
@@ -128,7 +144,8 @@ public class FusionMotor {
                     creationColor = c;
                     goToState(FusionMotorState.CREATION);
                 } else {
-                    //CREATE
+                    creationColor = c;
+                    create();
                     goToState(FusionMotorState.IDLE);
                 }
         }
@@ -141,11 +158,11 @@ public class FusionMotor {
                 break;
             case CREATION_WAIT_FOR_KEYWORD:
                 if (creationPosition == null) {
-                    //FSMColor(creationXY)
+                    creationColor = ivyInterface.fsmColor(creationXY.x, creationXY.y);
                     goToState(FusionMotorState.CREATION);
                 } else {
-                    //FSMColor(creationXY);
-                    //CREATE
+                    creationColor = ivyInterface.fsmColor(creationXY.x, creationXY.y);
+                    create();
                     goToState(FusionMotorState.IDLE);
                 }
                 break;
@@ -172,19 +189,19 @@ public class FusionMotor {
             case 3:
                 if (state == FusionMotorState.CREATION && creationPosition == null && creationColor != null) {
                     goToState(FusionMotorState.IDLE);
-                    //CREATE
+                    create();
                 }
                 break;
             case 4:
                 if (state == FusionMotorState.CREATION && creationPosition != null && creationColor == null) {
                     goToState(FusionMotorState.IDLE);
-                    //CREATE
+                    create();
                 }
                 break;
             case 5:
                 if (state == FusionMotorState.CREATION && creationPosition == null && creationColor == null) {
                     goToState(FusionMotorState.IDLE);
-                    //CREATE
+                    create();
                 }
                 break;
         }
@@ -200,6 +217,7 @@ public class FusionMotor {
 
     private void goToState(FusionMotorState state) {
         if (this.state != null) {
+            System.out.println("FM from " + this.state + " to " + state);
             switch (this.state) {
                 case IDLE:
                     break;
@@ -263,6 +281,7 @@ public class FusionMotor {
         this.state = state;
         switch (state) {
             case IDLE:
+                reset();
                 break;
             case CREATION:
                 timers[3].restart();
@@ -320,6 +339,20 @@ public class FusionMotor {
                 throw new AssertionError(state.name());
 
         }
+    }
+    
+    private void create(){
+        Integer x = (creationPosition == null ? null : creationPosition.x);
+        Integer y = (creationPosition == null ? null : creationPosition.y);
+        this.ivyInterface.create(x, y, creationColor, creationValueForme);
+    }
+    
+    private void reset(){
+        creationColor = null;
+        creationPosition = null;
+        creationValueForme = null;
+        creationXY = null;
+        suppressionForme = null;
     }
 
 }
