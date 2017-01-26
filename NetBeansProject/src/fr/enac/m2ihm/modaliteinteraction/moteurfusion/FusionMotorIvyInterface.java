@@ -13,6 +13,7 @@ import java.awt.Point;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,7 +27,7 @@ public class FusionMotorIvyInterface {
 
     public static final String createEvent = "createEventProperty";
     public static final String deleteEvent = "deleteEventProperty";
-    public static final String moveEvent = "deleteEventProperty";
+    public static final String moveEvent = "moveEventProperty";
     public static final String keywordPositionEvent = "keywordPositionProperty";
     public static final String clicEvent = "clicProperty";
     public static final String keywordColorEvent = "keywordColorProperty";
@@ -387,8 +388,99 @@ public class FusionMotorIvyInterface {
         }
     }
     
+    private enum FSMMoveState{
+        IDLE,
+        GET_ALL_BELOW_POINT_MOVE,
+        GET_ALL_INFOS_MOVE
+    }
+    
+    private final class FSMMove{
+        
+        private FSMMoveState state;
+        private List<String> noms;
+        private HashMap<String, String[]> formes; //[nom; [color, position], ...]
+        private Timer timer1;
+        private Timer timer2;
+        private Forme forme;
+        private Point destination;
+        private Color color;
+        
+        private int size;
+        
+        private FSMMove(){
+            timer1 = new Timer(250, null);
+            timer2 = new Timer(250, null);
+            timer1.addActionListener((e) -> {
+                if (state == FSMMoveState.GET_ALL_BELOW_POINT_MOVE){
+                    if (forme != Forme.ANY){
+                        timer1.stop();
+                        trierFormes();
+                        size = noms.size() - 1;
+                        demanderInfo(noms.get(size));
+                        noms.remove(size);
+                        state = FSMMoveState.GET_ALL_INFOS_MOVE;
+                        timer2.start();
+                    }else if(forme == Forme.ANY){
+                        timer1.stop();
+                        size = noms.size() - 1;
+                        demanderInfo(noms.get(size));
+                        noms.remove(size);
+                        state = FSMMoveState.GET_ALL_INFOS_MOVE;
+                        timer2.start();
+                    }
+                }
+            });
+            //TODO : GETALLINFOS AND TRANSITIONS !
+            try {
+                ivy.bindMsg("Palette:ResultatTesterPoint x=[^ ]* y=[^ ]* nom=([^ ]*)", (client, args) -> {
+                    if (state == FSMMoveState.GET_ALL_BELOW_POINT_MOVE){
+                        noms.add(args[0]);
+                        timer1.restart();
+                        state = FSMMoveState.GET_ALL_BELOW_POINT_MOVE;
+                    }
+                    
+                });
+            } catch (IvyException ex) {
+                Logger.getLogger(FusionMotorIvyInterface.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        private void move(Forme f, Color c, Point formePosition, Point destination){
+            switch (state){
+                case IDLE:
+                    noms = new ArrayList<>();
+                    testerPoint(formePosition.x, formePosition.y);
+                    forme = f;
+                    color = c;
+                    this.destination = destination;
+                    break;
+            }
+        }
+        
+        private void trierFormes(){
+            List<String> filteredList = new ArrayList<>();
+            String prefix = "";
+            if (forme == Forme.ELLIPSE){
+                prefix = "ellipse";
+            }
+            if (forme == Forme.RECTANGLE){
+                prefix = "rectangle";
+            }
+            for (String nom: noms){
+                if (nom.startsWith(prefix)){
+                    filteredList.add(nom);
+                }
+            }
+            noms = filteredList;
+        }
+    }
+    
     public void delete(int x, int y, Forme f, Color c){
         fsmDelete.delete(x, y, f, c);
+    }
+    
+    public void move(Forme f, Color c, Point formePosition, Point destination){
+        
     }
     
     public void supprimer(String name){

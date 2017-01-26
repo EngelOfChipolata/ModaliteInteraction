@@ -17,8 +17,10 @@ import javax.swing.Timer;
 public class FusionMotor {
 
     private final int[] timerDurations = {3000, 3000, 3000, 4500, 4500, 4500, // Timer6, end creation
-                                            4500, 4500, 4500, 3000     // Timer 10, end supression
-};
+                                            4500, 4500, 4500, 3000,     // Timer 10, end supression
+                                            4500, 4500, 4500, 4500, 5000, 5000, 4500, 4500, //Timer 18
+                                          4500, 4500, 3000, 4500, 4500 //Timer 23 end deplacement
+    };
 
     private final FusionMotorIvyInterface ivyInterface;
     private FusionMotorState state;
@@ -31,6 +33,13 @@ public class FusionMotor {
     private Forme suppressionValueForme;
     private Point suppressionXY;
     private Color suppressionColor;
+    
+    private Point moveXY; //Used to store temporarly position (when a clic occurs but dunno for what)
+    private Forme moveValueForme;
+    private Forme moveTempForme;
+    private Point movePosForme;
+    private Point moveDestPoint;
+    private Color moveColor;
     
     private final Timer[] timers;
     
@@ -56,6 +65,9 @@ public class FusionMotor {
         });
         ivyInterface.addPropertyChangeListener(FusionMotorIvyInterface.keywordObjectEvent, (evt) -> {
             kwObject((Forme) evt.getNewValue());
+        });
+        ivyInterface.addPropertyChangeListener(FusionMotorIvyInterface.moveEvent, (evt) -> {
+            trait();
         });
         timers = new Timer[timerDurations.length];
         for (int i = 0; i < timers.length; i++) {
@@ -92,6 +104,14 @@ public class FusionMotor {
                 break;
         }
     }
+    
+    private void trait(){
+        switch (state){
+            case IDLE:
+                goToState(FusionMotorState.DEPLACEMENT);
+                break;
+        }
+    }
 
     private void kwPosition() {
         switch (state) {
@@ -108,6 +128,27 @@ public class FusionMotor {
                     majPosCrea(creationXY);
                 }
                 break;
+            case DEPLACEMENT:
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_FOR_CLIC_POSITION_1);
+                break;
+            case DEPLACEMENT_WAIT_FOR_KEYWORD:
+                moveDestPoint = moveXY;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_SHAPE);
+                break;
+            case DEPLACEMENT_WAIT_NEXT_SHAPE:
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_CLIC_POSITION_UPDATE);
+                break;
+            case DEPLACEMENT_WAIT_KEYWORD_OBJECT:
+                moveDestPoint = moveXY;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_SHAPE);
+                break;
+            case DEPLACEMENT_WAIT_NEXT_POSITION:
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_FOR_CLIC_POSITION_2);
+                break;
+            case DEPLACEMENT_WAIT_KEYWORD_POSITION:
+                move();
+                goToState(FusionMotorState.IDLE);
+                break;
         }
     }
 
@@ -122,9 +163,9 @@ public class FusionMotor {
                     goToState(FusionMotorState.CREATION);
                     majPosCrea(pt);
                 } else {
-                    goToState(FusionMotorState.IDLE);
                     majPosCrea(pt);
-                    create();
+                    create();                    
+                    goToState(FusionMotorState.IDLE);
                     
                 }
                 break;
@@ -137,9 +178,9 @@ public class FusionMotor {
                     goToState(FusionMotorState.CREATION);
                     creationColor = ivyInterface.fsmColor(pt.x, pt.y);
                 } else {
-                    goToState(FusionMotorState.IDLE);
                     creationColor = ivyInterface.fsmColor(pt.x, pt.y);
                     create();
+                    goToState(FusionMotorState.IDLE);
                 }
                 break;
             case SUPPRESSION:
@@ -157,6 +198,46 @@ public class FusionMotor {
             case SUPPRESSION_WAIT_CLIC_UPDATE:
                 suppressionXY = pt;
                 goToState(FusionMotorState.SUPPRESSION_WAIT_COLOR);
+                break;
+            case DEPLACEMENT:
+                moveXY = pt;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_FOR_KEYWORD);
+                break;
+            case DEPLACEMENT_WAIT_FOR_CLIC_POSITION_1:
+                moveDestPoint = pt;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_SHAPE);
+                break;
+            case DEPLACEMENT_WAIT_FOR_CLIC_SHAPE_1:
+                moveValueForme = moveTempForme;
+                movePosForme = pt;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_POSITION);
+                break;
+            case DEPLACEMENT_WAIT_CLIC_POSITION_UPDATE:
+                moveDestPoint = pt;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_SHAPE);
+                break;
+            case DEPLACEMENT_WAIT_NEXT_SHAPE:
+                moveXY = pt;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_KEYWORD_OBJECT);
+                break;
+            case DEPLACEMENT_WAIT_NEXT_POSITION:
+                moveXY = pt;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_KEYWORD_POSITION);
+                break;
+            case DEPLACEMENT_WAIT_CLIC_SHAPE_UPDATE:
+                moveValueForme = moveTempForme;
+                movePosForme = pt;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_POSITION);
+                break;
+            case DEPLACEMENT_WAIT_FOR_CLIC_SHAPE_2:
+                moveValueForme = moveTempForme;
+                movePosForme = pt;
+                goToState(FusionMotorState.DEPLACEMENT_COLOR);
+                break;
+            case DEPLACEMENT_WAIT_FOR_CLIC_POSITION_2:
+                moveDestPoint = pt;
+                move();
+                goToState(FusionMotorState.IDLE);
                 break;
         }
     }
@@ -176,6 +257,16 @@ public class FusionMotor {
             case SUPPRESSION_WAIT_COLOR:
                 suppressionColor = c;
                 suppression();
+                goToState(FusionMotorState.IDLE);
+                break;
+            case DEPLACEMENT_WAIT_NEXT_POSITION:
+                moveColor = c;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_POSITION);
+                break;
+            case DEPLACEMENT_COLOR:
+                moveColor = c;
+                move();
+                goToState(FusionMotorState.IDLE);
                 break;
         }
     }
@@ -216,6 +307,33 @@ public class FusionMotor {
                 majValueFormeSuppr(f);
                 goToState(FusionMotorState.SUPPRESSION_WAIT_COLOR);
                 break;
+            case DEPLACEMENT:
+                moveTempForme = f;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_FOR_CLIC_SHAPE_1);
+                break;
+            case DEPLACEMENT_WAIT_FOR_KEYWORD:
+                moveValueForme = f;
+                movePosForme = moveXY;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_POSITION);
+                break;
+            case DEPLACEMENT_WAIT_NEXT_SHAPE:
+                moveTempForme = f;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_FOR_CLIC_SHAPE_2);
+                break;
+            case DEPLACEMENT_WAIT_KEYWORD_POSITION:
+                moveValueForme = f;
+                movePosForme = moveXY;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_POSITION);
+                break;
+            case DEPLACEMENT_WAIT_NEXT_POSITION:
+                moveTempForme = f;
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_CLIC_SHAPE_UPDATE);
+                break;
+            case DEPLACEMENT_WAIT_KEYWORD_OBJECT:
+                moveValueForme = f;
+                movePosForme = moveXY;
+                goToState(FusionMotorState.DEPLACEMENT_COLOR);
+                break;
         }
     }
 
@@ -254,7 +372,7 @@ public class FusionMotor {
                     create();
                 }
                 break;
-            case 6:
+            case 6: //TODO : For all timers checks states !!!!
                 goToState(FusionMotorState.IDLE);
                 break;
             case 7:
@@ -266,6 +384,49 @@ public class FusionMotor {
             case 9:
                 suppression();
                 goToState(FusionMotorState.IDLE);
+                break;
+            case 10:
+                goToState(FusionMotorState.IDLE);
+                break;
+            case 11:
+                goToState(FusionMotorState.DEPLACEMENT);
+                break;
+            case 12:
+                goToState(FusionMotorState.DEPLACEMENT);
+                break;
+            case 13:
+                goToState(FusionMotorState.DEPLACEMENT);
+                break;
+            case 14:
+                goToState(FusionMotorState.DEPLACEMENT);
+                break;
+            case 15:
+                goToState(FusionMotorState.DEPLACEMENT);
+                break;
+            case 16:
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_SHAPE);
+                break;
+            case 17:
+                if (state == FusionMotorState.DEPLACEMENT_WAIT_CLIC_SHAPE_UPDATE){
+                    goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_POSITION);
+                }
+                break;
+            case 18:
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_SHAPE);
+                break;
+            case 19:
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_SHAPE);
+                break;
+            case 20:
+                moveColor = null;
+                move();
+                goToState(FusionMotorState.IDLE);
+                break;
+            case 21:
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_POSITION);
+                break;
+            case 22:
+                goToState(FusionMotorState.DEPLACEMENT_WAIT_NEXT_POSITION);
                 break;
         }
     }
@@ -304,30 +465,43 @@ public class FusionMotor {
                     timers[2].stop();
                     break;
                 case DEPLACEMENT:
+                    timers[10].stop();
                     break;
                 case DEPLACEMENT_WAIT_FOR_CLIC_POSITION_1:
+                    timers[11].stop();
                     break;
                 case DEPLACEMENT_WAIT_FOR_KEYWORD:
+                    timers[12].stop();
                     break;
                 case DEPLACEMENT_WAIT_FOR_CLIC_SHAPE_1:
+                    timers[13].stop();
                     break;
                 case DEPLACEMENT_WAIT_NEXT_SHAPE:
+                    timers[14].stop();
                     break;
                 case DEPLACEMENT_WAIT_CLIC_POSITION_UPDATE:
+                    timers[16].stop();
                     break;
                 case DEPLACEMENT_WAIT_NEXT_POSITION:
+                    timers[15].stop();
                     break;
                 case DEPLACEMENT_WAIT_CLIC_SHAPE_UPDATE:
+                    timers[17].stop();
                     break;
                 case DEPLACEMENT_WAIT_KEYWORD_OBJECT:
+                    timers[18].stop();
                     break;
-                case DEPLACEMENT_WAIT_CLIC_SHAPE_2:
+                case DEPLACEMENT_WAIT_FOR_CLIC_SHAPE_2:
+                    timers[19].stop();
                     break;
-                case DEPLACEMENT_WAIT_CLIC_POSITION_2:
+                case DEPLACEMENT_WAIT_FOR_CLIC_POSITION_2:
+                    timers[21].stop();
                     break;
                 case DEPLACEMENT_WAIT_KEYWORD_POSITION:
+                    timers[22].stop();
                     break;
                 case DEPLACEMENT_COLOR:
+                    timers[20].stop();
                     break;
                 case SUPPRESSION:
                     timers[6].stop();
@@ -370,30 +544,43 @@ public class FusionMotor {
                 timers[2].restart();
                 break;
             case DEPLACEMENT:
+                timers[10].restart();
                 break;
             case DEPLACEMENT_WAIT_FOR_CLIC_POSITION_1:
+                timers[11].restart();
                 break;
             case DEPLACEMENT_WAIT_FOR_KEYWORD:
+                timers[12].restart();
                 break;
             case DEPLACEMENT_WAIT_FOR_CLIC_SHAPE_1:
+                timers[13].restart();
                 break;
             case DEPLACEMENT_WAIT_NEXT_SHAPE:
+                timers[14].restart();
                 break;
             case DEPLACEMENT_WAIT_CLIC_POSITION_UPDATE:
+                timers[16].restart();
                 break;
             case DEPLACEMENT_WAIT_NEXT_POSITION:
+                timers[15].restart();
                 break;
             case DEPLACEMENT_WAIT_CLIC_SHAPE_UPDATE:
+                timers[17].restart();
                 break;
             case DEPLACEMENT_WAIT_KEYWORD_OBJECT:
+                timers[18].restart();
                 break;
-            case DEPLACEMENT_WAIT_CLIC_SHAPE_2:
+            case DEPLACEMENT_WAIT_FOR_CLIC_SHAPE_2:
+                timers[19].restart();
                 break;
-            case DEPLACEMENT_WAIT_CLIC_POSITION_2:
+            case DEPLACEMENT_WAIT_FOR_CLIC_POSITION_2:
+                timers[21].restart();
                 break;
             case DEPLACEMENT_WAIT_KEYWORD_POSITION:
+                timers[22].restart();
                 break;
             case DEPLACEMENT_COLOR:
+                timers[20].restart();
                 break;
             case SUPPRESSION:
                 timers[6].restart();
@@ -427,6 +614,10 @@ public class FusionMotor {
         this.ivyInterface.delete(suppressionXY.x, suppressionXY.y, suppressionValueForme, suppressionColor);
     }
     
+    private void move(){
+        
+    }
+    
     private void reset(){
         creationColor = null;
         creationPosition = null;
@@ -435,6 +626,12 @@ public class FusionMotor {
         suppressionValueForme = null;
         suppressionColor = null;
         suppressionXY = null;
+        moveColor = null;
+        moveDestPoint = null;
+        movePosForme = null;
+        moveValueForme = null;
+        moveXY = null;
+        moveTempForme = null;
     }
 
 }
