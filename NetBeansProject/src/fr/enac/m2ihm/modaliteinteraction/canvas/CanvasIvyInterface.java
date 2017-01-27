@@ -54,36 +54,6 @@ public class CanvasIvyInterface {
         } catch (IvyException ex) {
             Logger.getLogger(CanvasIvyInterface.class.getName()).log(Level.SEVERE, null, ex);
         }
-        /*s.normalize();
-        List<Point> l = new ArrayList<>();
-        for (Point2D.Double p : s.getPoints()){
-            l.add(new Point((int)p.getX(), (int)p.getY()));
-        }
-        if (i==0){
-            temp = new HashMap<>();
-            temp.put(Gesture.ELLIPSE, l);
-        }
-        if (i == 1){
-            temp.put(Gesture.RECTANGLE, l);
-        }
-        if (i == 2){
-            temp.put(Gesture.LINE, l);
-        }
-        if (i == 3){
-            temp.put(Gesture.ALPHA, l);
-            
-            try {
-                FileOutputStream fileOut = new FileOutputStream("gestures/patterns.txt");
-                ObjectOutputStream out = new ObjectOutputStream(fileOut);
-                out.writeObject(temp);
-                out.close();
-                fileOut.close();
-                System.out.printf("Serialized data is saved in /tmp/employee.ser");
-            }catch(IOException i) {
-                i.printStackTrace();
-            }
-        }
-        i++;*/
     }
     
     

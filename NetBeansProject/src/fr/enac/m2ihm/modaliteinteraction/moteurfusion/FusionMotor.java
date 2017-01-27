@@ -29,6 +29,7 @@ public class FusionMotor {
     private Point creationPosition;
     private Point creationXY;
     private Color creationColor;
+    private Point creationColorXY;
     
     private Forme suppressionValueForme;
     private Point suppressionXY;
@@ -119,7 +120,7 @@ public class FusionMotor {
                 goToState(FusionMotorState.CREATION_WAIT_FOR_CLIC_POSITION);
                 break;
             case CREATION_WAIT_FOR_KEYWORD:
-                if (creationColor != null) {
+                if (creationColor != null || creationColorXY != null) {
                     majPosCrea(creationXY);
                     create();
                     goToState(FusionMotorState.IDLE);
@@ -146,6 +147,7 @@ public class FusionMotor {
                 goToState(FusionMotorState.DEPLACEMENT_WAIT_FOR_CLIC_POSITION_2);
                 break;
             case DEPLACEMENT_WAIT_KEYWORD_POSITION:
+                moveDestPoint = moveXY;
                 move();
                 goToState(FusionMotorState.IDLE);
                 break;
@@ -159,7 +161,7 @@ public class FusionMotor {
                 goToState(FusionMotorState.CREATION_WAIT_FOR_KEYWORD);
                 break;
             case CREATION_WAIT_FOR_CLIC_POSITION:
-                if (creationColor == null) {
+                if (creationColor == null && creationColorXY == null) {
                     goToState(FusionMotorState.CREATION);
                     majPosCrea(pt);
                 } else {
@@ -176,9 +178,11 @@ public class FusionMotor {
             case CREATION_WAIT_FOR_CLIC_COLOR:
                 if (creationPosition == null) {
                     goToState(FusionMotorState.CREATION);
-                    creationColor = ivyInterface.fsmColor(pt.x, pt.y);
+                    creationColor = null;
+                    creationColorXY = pt;
                 } else {
-                    creationColor = ivyInterface.fsmColor(pt.x, pt.y);
+                    creationColor = null;
+                    creationColorXY = pt;
                     create();
                     goToState(FusionMotorState.IDLE);
                 }
@@ -247,9 +251,11 @@ public class FusionMotor {
             case CREATION:
                 if (creationPosition == null) {
                     creationColor = c;
+                    creationColorXY = null;
                     goToState(FusionMotorState.CREATION);
                 } else {
                     creationColor = c;
+                    creationColorXY = null;
                     create();
                     goToState(FusionMotorState.IDLE);
                 }
@@ -278,10 +284,12 @@ public class FusionMotor {
                 break;
             case CREATION_WAIT_FOR_KEYWORD:
                 if (creationPosition == null) {
-                    creationColor = ivyInterface.fsmColor(creationXY.x, creationXY.y);
+                    creationColor = null;
+                    creationColorXY = creationXY;
                     goToState(FusionMotorState.CREATION);
                 } else {
-                    creationColor = ivyInterface.fsmColor(creationXY.x, creationXY.y);
+                    creationColor = null;
+                    creationColorXY = creationXY;
                     create();
                     goToState(FusionMotorState.IDLE);
                 }
@@ -355,21 +363,21 @@ public class FusionMotor {
                 }
                 break;
             case 3:
-                if (state == FusionMotorState.CREATION && creationPosition == null && creationColor != null) {
-                    goToState(FusionMotorState.IDLE);
+                if (state == FusionMotorState.CREATION && creationPosition == null && (creationColor != null || creationColorXY != null)) {
                     create();
+                    goToState(FusionMotorState.IDLE);
                 }
                 break;
             case 4:
-                if (state == FusionMotorState.CREATION && creationPosition != null && creationColor == null) {
-                    goToState(FusionMotorState.IDLE);
+                if (state == FusionMotorState.CREATION && creationPosition != null && creationColor == null && creationColorXY == null) {
                     create();
+                    goToState(FusionMotorState.IDLE);
                 }
                 break;
             case 5:
-                if (state == FusionMotorState.CREATION && creationPosition == null && creationColor == null) {
-                    goToState(FusionMotorState.IDLE);
+                if (state == FusionMotorState.CREATION && creationPosition == null && creationColor == null && creationColorXY == null) {
                     create();
+                    goToState(FusionMotorState.IDLE);                    
                 }
                 break;
             case 6: //TODO : For all timers checks states !!!!
@@ -607,7 +615,7 @@ public class FusionMotor {
     private void create(){
         Integer x = (creationPosition == null ? null : creationPosition.x);
         Integer y = (creationPosition == null ? null : creationPosition.y);
-        this.ivyInterface.create(x, y, creationColor, creationValueForme);
+        this.ivyInterface.create(x, y, creationColor, creationValueForme, creationColorXY);
     }
     
     private void suppression(){
@@ -615,11 +623,12 @@ public class FusionMotor {
     }
     
     private void move(){
-        
+        this.ivyInterface.move(moveTempForme, moveColor, movePosForme, moveDestPoint);
     }
     
     private void reset(){
         creationColor = null;
+        creationColorXY = null;
         creationPosition = null;
         creationValueForme = null;
         creationXY = null;
